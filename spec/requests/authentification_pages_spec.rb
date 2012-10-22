@@ -10,6 +10,7 @@ describe "Authentification" do
 		it { should have_selector('h1', text: 'Sign in') }
 		it { should have_selector('title', text: 'Sign in') }
 	end
+
 	describe "sign in" do
 		before { visit signin_path }
 
@@ -19,11 +20,17 @@ describe "Authentification" do
 			it { should have_selector('title', text: 'Sign in') }
 			it { should have_selector('div.alert.alert-error', text: 'Invalid') }
 
+			it { should_not have_link('Users', href: users_path) }
+			it { should_not have_link('Profile') }
+			it { should_not have_link('Settings') }
+			it { should_not have_link('Sign out', href: signout_path) }
+
 			describe "after visiting an another page" do 
 				before { click_link "Home" }
 				it { should_not have_selector('div.alert.alert-error') }
 			end
 		end
+
 		describe "with valid information" do 
 			let(:user) { FactoryGirl.create(:user) }
 			before { sign_in user }
@@ -38,6 +45,7 @@ describe "Authentification" do
 			it { should_not have_link('Sign in', href: signin_path) }
 		end
 	end
+
 	describe "authorization" do 
 		let(:user) { FactoryGirl.create(:user) }
 
@@ -52,10 +60,12 @@ describe "Authentification" do
 					it { should have_selector('title', text: 'Sign in') }
 				end
 			end
+
 			describe "submitting to the update action" do 
 				before { put user_path(user) }
 				specify { response.should redirect_to(signin_path) }
 			end
+
 			describe "when attempting to visit a protected page" do 
 				before do 
 					visit edit_user_path(user)
@@ -67,9 +77,32 @@ describe "Authentification" do
 					it "should render the desired protected page" do 
 						page.should have_selector('title', text: 'Edit user')
 					end
+					describe "when signing in again" do 
+						before do 
+							click_link('Sign out')
+							sign_in user
+						end
+
+						it { should have_selector('title', text: user.name) }
+					end
 				end
 			end
+			describe "in the Microposts controller" do 
+
+				describe "submitting to the create action" do 	
+					before { post microposts_path }
+					specify { response.should redirect_to(signin_path) }
+				end
+				describe "submitting to the destroy action" do 
+					before do 
+						micropost = FactoryGirl.create(:micropost)
+						delete micropost_path(micropost)
+					end
+					specify { response.should redirect_to(signin_path) }
+				end
+			end 
 		end
+
 		describe "as wrong user" do 
 			let(:wrong_user) { FactoryGirl.create(:user, name: "Wrong User", email: "wrong@example.com") }
 			before { sign_in user}
@@ -80,9 +113,23 @@ describe "Authentification" do
 			end
 			describe "submitting a PUT request to the Users#update action" do
 				before { put user_path(wrong_user) }
-				specify { response.should redirect_to (root_path) }
+				specify { response.should redirect_to(root_path) }
 			end
 		end 
+
+		describe "as signed-in user" do 
+			before { sign_in user }
+
+			describe "when visiting the signup page" do 
+				before { visit signup_path }
+				it { should have_selector('h1', text: user.name) }
+			end
+			describe "when visiting signin page" do 
+				before { visit signin_path }
+				it { should have_selector('h1', text: user.name) }
+			end
+		end
+
 		describe "as non-admin user" do 
 			let(:user) { FactoryGirl.create(:user) }
 			let(:non_admin) { FactoryGirl.create(:user) }
@@ -94,6 +141,6 @@ describe "Authentification" do
 
 				specify { response.should redirect_to(root_path) }
 			end
-		end 
+		end
 	end
 end
