@@ -41,5 +41,13 @@ describe "Micropost pages" do
   				expect { click_link "delete" }.to change(Micropost, :count).by(-1)
   			end
   		end
+  		describe "as incorrect user" do
+  			let(:wrong_user) { FactoryGirl.create(:user, name: "Bob", email: "bob@example.com") }
+  			let!(:micropost) { FactoryGirl.create(:micropost, user: wrong_user) }
+
+  			it "should not be able to delete the micropost" do 
+  				expect { delete micropost_path(micropost) }.to_not change(Micropost, :count)
+  			end
+  		end
   	end
 end
